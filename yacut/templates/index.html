@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}YaCut - укоротитель ссылок{% endblock %}
+
+{% block content %}
+<section class="container my-5 px-4">
+  <h1 class="text-center"><span style="color:red">Ya</span>Cut</h1>
+  <p class="text-center my-4">
+    Создайте короткую ссылку автоматически или предложите свой вариант
+  </p>
+
+  <div class="container">
+    <div class="row my-3">
+      <div class="col-sm">
+      </div>
+      <div class="col-sm">
+        <form method="POST" action="{{ url_for('index_view') }}">
+          {{ form.csrf_token }}
+          <div>
+            <div>
+              {{ form.original_link(class="form-control form-control-lg py-2 mb-3", placeholder="Длинная ссылка") }}
+              {% if form.original_link.errors %}
+                <p><span style="color:red">{{ form.original_link.errors[0] }}</span></p>
+              {% endif %}
+            </div>
+            <div>
+              {{ form.custom_id(class="form-control form-control-lg py-2 mb-3", placeholder="Ваш вариант короткой ссылки") }}
+              {% if form.custom_id.errors %}
+                <p><span style="color:red">{{ form.custom_id.errors[0] }}</span></p>
+              {% endif %}
+            </div>
+
+            <input type="submit" class="btn btn-primary" value="Создать">
+          </div>
+        </form>
+      </div>
+      <div class="col-sm">
+      </div>
+    </div>
+  </div>
+
+  {% if short_url %}
+  <div class="container">
+    <div class="row">
+      <div class="col-sm">
+      </div>
+      <div class="col-sm">
+        <div class="alert alert-success" role="alert">
+          <h5 class="text-center">Короткая ссылка создана!</h5>
+          <p class="text-center">
+            <a href="{{ short_url }}" target="_blank" id="short-link">{{ short_url }}</a>
+            <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard()">Копировать</button>
+          </p>
+          <p class="text-muted small text-center">Оригинал: {{ original }}</p>
+        </div>
+      </div>
+      <div class="col-sm">
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="container">
+        <div class="row">
+          <div class="col-sm">
+          </div>
+          <div class="col-sm">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category if category != 'message' else 'info' }}" role="alert">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+          <div class="col-sm">
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  {% endwith %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function copyToClipboard() {
+    const link = document.getElementById('short-link');
+    const text = link.textContent;
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Ссылка скопирована!');
+      }).catch(() => {
+        fallbackCopy(text);
+      });
+    } else {
+      fallbackCopy(text);
+    }
+  }
+  
+  function fallbackCopy(text) {
+    const input = document.createElement('input');
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+    alert('Ссылка скопирована!');
+  }
+</script>
+{% endblock %}

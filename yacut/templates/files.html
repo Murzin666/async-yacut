@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Загрузка файлов на Яндекс Диск{% endblock %}
+
+{% block content %}
+<section class="container my-5 px-4">
+  <h1 class="text-center"><span style="color:red">Ya</span>Cut</h1>
+  <p class="text-center my-4">
+    Загрузите файлы на Яндекс Диск и получите короткие ссылки
+  </p>
+
+  <div class="container">
+    <div class="row my-3">
+      <div class="col-sm">
+      </div>
+      <div class="col-sm">
+        <form method="POST" action="{{ url_for('files_view') }}" enctype="multipart/form-data">
+          {{ form.csrf_token }}
+          <div>
+            <div>
+              {{ form.files(class="form-control form-control-lg py-2 mb-3", multiple="multiple", accept="*/*") }}
+              {% if form.files.errors %}
+                <p><span style="color:red">{{ form.files.errors[0] }}</span></p>
+              {% endif %}
+            </div>
+            <input type="submit" class="btn btn-primary" value="Загрузить файлы">
+          </div>
+        </form>
+      </div>
+      <div class="col-sm">
+      </div>
+    </div>
+  </div>
+
+  {% if uploaded_files %}
+  <div class="container">
+    <div class="row">
+      <div class="col-sm">
+      </div>
+      <div class="col-sm">
+        <h5 class="text-center">Загруженные файлы:</h5>
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Имя файла</th>
+              <th>Короткая ссылка</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for file in uploaded_files %}
+            <tr>
+              <td>{{ file.filename }}</td>
+              <td>
+                {% if file.short_link %}
+                  <a href="{{ file.short_link }}" target="_blank">{{ file.short_link }}</a>
+                {% else %}
+                  <span style="color:red">{{ file.error }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="col-sm">
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="container">
+        <div class="row">
+          <div class="col-sm">
+          </div>
+          <div class="col-sm">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category if category != 'message' else 'info' }}" role="alert">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+          <div class="col-sm">
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  {% endwith %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) {
+      fileInput.addEventListener('change', function() {
+        const files = this.files;
+        if (files.length > 0) {
+          console.log(`Выбрано файлов: ${files.length}`);
+          // Можно добавить индикатор выбранных файлов
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}
