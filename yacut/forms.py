@@ -8,7 +8,6 @@ from wtforms.validators import (
     ValidationError,
     Optional
 )
-from .models import URLMap
 
 
 class URLForm(FlaskForm):
