@@ -8,16 +8,13 @@ def get_unique_short_id():
     chars = string.ascii_letters + string.digits
     length = 6
 
-    max_attempts = 100
-    attempts = 0
-
-    while attempts < max_attempts:
+    while True:
         short_id = ''.join(random.choice(chars) for _ in range(length))
 
+        # Проверяем, что ID не равен 'files' (зарезервированный путь)
+        if short_id == 'files':
+            continue
+
+        # Проверяем уникальность в БД
         if not URLMap.query.filter_by(short=short_id).first():
-            if short_id != 'files':
-                return short_id
-
-        attempts += 1
-
-    return get_unique_short_id()
+            return short_id
