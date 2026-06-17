@@ -5,7 +5,8 @@ from wtforms.validators import (
     URL,
     Length,
     Regexp,
-    ValidationError
+    ValidationError,
+    Optional
 )
 from .models import URLMap
 
@@ -21,6 +22,7 @@ class URLForm(FlaskForm):
     custom_id = StringField(
         'Ваш вариант короткой ссылки',
         validators=[
+            Optional(),
             Length(max=16, message='Не более 16 символов'),
             Regexp(
                 r'^[a-zA-Z0-9]+$',
@@ -30,16 +32,13 @@ class URLForm(FlaskForm):
     )
 
     def validate_custom_id(self, field):
-        if field.data:
-            existing = URLMap.query.filter_by(short=field.data).first()
-            if existing:
-                raise ValidationError(
-                    'Предложенный вариант короткой ссылки уже существует.'
-                )
-            if field.data == 'files':
-                raise ValidationError(
-                    'Предложенный вариант короткой ссылки уже существует.'
-                )
+        if not field.data:
+            return
+
+        if field.data == 'files':
+            raise ValidationError(
+                'Предложенный вариант короткой ссылки уже существует.'
+            )
 
 
 class FileUploadForm(FlaskForm):
