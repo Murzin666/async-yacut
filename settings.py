@@ -11,3 +11,4 @@ class Config:
     DISK_TOKEN = os.getenv('DISK_TOKEN', default='')
     MAX_CUSTOM_ID_LENGTH = 16
     WTF_CSRF_ENABLED = False
+    YANDEX_DISK_BASE_PATH = 'YaCut'

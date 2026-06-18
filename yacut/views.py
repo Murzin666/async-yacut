@@ -61,16 +61,17 @@ def files_view():
             uploaded_files = asyncio.run(upload_files_to_disk(files))
 
             for file_info in uploaded_files:
-                has_short_id = 'short_id' in file_info
-                if has_short_id and file_info.get('disk_url'):
+                if 'error' not in file_info:
+                    short_link = (
+                        f"{request.host_url}{file_info['short_id']}"
+                    )
+                    file_info['short_link'] = short_link
                     url_map = URLMap(
-                        original=file_info['disk_url'],
+                        original=file_info['disk_path'],
                         short=file_info['short_id'],
                         is_file=True
                     )
                     db.session.add(url_map)
-                    short_link = f"{request.host_url}{file_info['short_id']}"
-                    file_info['short_link'] = short_link
 
             db.session.commit()
 
@@ -97,7 +98,52 @@ def files_view():
 def redirect_to_url(short_id):
     """Переадресация по короткой ссылке."""
     url_map = URLMap.query.filter_by(short=short_id).first_or_404()
+
+    if url_map.is_file:
+        disk_token = app.config['DISK_TOKEN']
+        if not disk_token:
+            flash('Не настроен токен Яндекс Диска', 'danger')
+            return render_template('error.html', error_code=500,
+                                   error_message='Ошибка загрузки файла')
+
+        download_url = get_download_url(disk_token, url_map.original)
+        if download_url:
+            return redirect(download_url)
+        else:
+            flash('Ошибка получения ссылки на файл', 'danger')
+            return render_template('error.html', error_code=500,
+                                   error_message='Ошибка получения ссылки '
+                                   'на файл')
     return redirect(url_map.original)
+
+
+def get_download_url(disk_token, file_path):
+    """Получить свежую ссылку на скачивание файла с Яндекс Диска."""
+
+    async def fetch_download_url():
+        headers = {'Authorization': f'OAuth {disk_token}'}
+        download_url = (
+            'https://cloud-api.yandex.net/v1/disk/resources/download'
+        )
+        params = {'path': file_path}
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                download_url, headers=headers, params=params
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data.get('href', '')
+                return None
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(fetch_download_url())
+        loop.close()
+        return result
+    except Exception:
+        return None
 
 
 async def upload_files_to_disk(files):
@@ -127,12 +173,13 @@ async def upload_single_file(session, file, disk_token):
     """Загрузка одного файла на Яндекс Диск."""
     headers = {'Authorization': f'OAuth {disk_token}'}
     filename = file.filename
+    file_path = f'YaCut/{filename}'
 
     try:
         upload_url = (
             'https://cloud-api.yandex.net/v1/disk/resources/upload'
         )
-        params = {'path': f'YaCut/{filename}', 'overwrite': 'true'}
+        params = {'path': file_path, 'overwrite': 'true'}
 
         async with session.get(
             upload_url, headers=headers, params=params
@@ -159,25 +206,23 @@ async def upload_single_file(session, file, disk_token):
                     'error': f'Ошибка загрузки: статус {resp.status}'
                 }
 
-        short_id = get_unique_short_id()
         download_url = (
             'https://cloud-api.yandex.net/v1/disk/resources/download'
         )
-        params = {'path': f'YaCut/{filename}'}
+        params = {'path': file_path}
 
         async with session.get(
             download_url, headers=headers, params=params
         ) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                disk_url = data.get('href', '')
-            else:
-                disk_url = ''
+            if resp.status != 200:
+                pass
+
+        short_id = get_unique_short_id()
 
         return {
             'filename': filename,
             'short_id': short_id,
-            'disk_url': disk_url
+            'disk_path': file_path
         }
 
     except Exception as e:
